@@ -24,3 +24,8 @@ NARROW_HIGH_IPTG = 5
 
 MAX_ON = 0.49
 MIN_OFF = 0.01
+
+AMINO_ACIDS = ('G', 'A', 'L', 'M', 'F',
+               'W', 'K', 'Q', 'E', 'S',
+               'P', 'V', 'I', 'C', 'Y',
+               'H', 'R', 'N', 'D', 'T')
