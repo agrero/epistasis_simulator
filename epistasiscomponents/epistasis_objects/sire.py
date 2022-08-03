@@ -24,15 +24,18 @@ class Sire:
         """
         mutable_range = range(len(self.sequence))
         gene_ndxs = create_gene_ndxs(mutable_range)
+        seq_to_mutate = self.sequence
 
         mutants_list = []
 
         count = 0
         while count != no_mutations:
+            if len(mutants_list) != 0:
+                seq_to_mutate = mutants_list[-1]
             mutant_ndx = random.choice(gene_ndxs)
             gene_ndxs.remove(mutant_ndx)
             mutation = (mutant_ndx, 'G')
-            mutant_sequence = mutate(self.sequence, mutation)
+            mutant_sequence = mutate(seq_to_mutate, mutation)
             mutants_list.append(mutant_sequence)
             count += 1
 
