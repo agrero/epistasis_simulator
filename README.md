@@ -10,4 +10,4 @@ Currently working on
     being the location.
       - [(O, M, X)] O being original, M being mutation, X being the index
       - Maybe, just maybe make a method in the progeny that allows for recreation of the parent strand, couldn't be that hard :D
-      
+  - Figure out a better name than epistasiscomponents
