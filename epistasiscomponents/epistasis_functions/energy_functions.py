@@ -1,7 +1,8 @@
 import numpy as np
-from ..constants import G_H, G_L2E, G_HDNA, MU_IPTG_RANGE, BETA, MU_OPERATOR, LOW_IPTG, HIGH_IPTG, MAX_ON, MIN_OFF
+import epistasiscomponents
+from epistasis_functions.constants import G_H, G_L2E, G_HDNA, MU_IPTG_RANGE, BETA, MU_OPERATOR, LOW_IPTG, HIGH_IPTG, MAX_ON, MIN_OFF
 
-def pops(dG_h=0,
+def relative_populations(dG_h=0,
          dG_l2e=0,
          dG_hdna=0,   
          G_h=G_H,
@@ -60,7 +61,7 @@ def dg_obs(dG_h=0,
     Returns dG (H + L2E --> HDNA)
     """
     
-    w_h, w_l2e, w_hdna = pops(dG_h,
+    w_h, w_l2e, w_hdna = relative_populations(dG_h,
                               dG_l2e,
                               dG_hdna,
                               G_h,
@@ -262,7 +263,7 @@ def mutate_background(mutant_energies,
         mutant_dG_hdna = dG_hdna + me[2]
         
         # Calculate the fractional population of each conformation
-        fx_h, fx_l2e, fx_hdna = pops(dG_h=mutant_dG_h,
+        fx_h, fx_l2e, fx_hdna = relative_populations(dG_h=mutant_dG_h,
                                      dG_l2e=mutant_dG_l2e,
                                      dG_hdna=mutant_dG_hdna,
                                      G_h=G_h,
