@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 BETA =  (1/(298*0.001987)) # energy units in kcal/mol
 MU_OPERATOR =  0 # operator chemical potential is 10 kcal/mol
@@ -25,7 +26,14 @@ NARROW_HIGH_IPTG = 5
 MAX_ON = 0.49
 MIN_OFF = 0.01
 
+#Tuple of all amino acid single letter codes
 AMINO_ACIDS = ('G', 'A', 'L', 'M', 'F',
                'W', 'K', 'Q', 'E', 'S',
                'P', 'V', 'I', 'C', 'Y',
                'H', 'R', 'N', 'D', 'T')
+
+#ddg for all possible mutations in the lac repressor
+DDG = pd.read_csv("epistasiscomponents//ddg.csv", index_col=0)
+
+#The lac repressor amino sequence is here becuase it's ugly to look at
+LAC_SEQ = "LLIGVATSSLALHAPSQIVAAIKSRADQLGASVVVSMVERSGVEACKTAVHNLLAQRVSGLIINYPLDDQDAIAVEAACTNVPALFLDVSDQTPINSIIFSHEDGTRLGVEHLVALGHQQIALLAGPLSSVSARLRLAGWHKYLTRNQIQPIAEREGDWSAMSGFQQTMQMLNEGIVPTAMLVANDQMALGAMRAITESGLRVGADISVVGYDDTEDSSCYIPPLTTIKQDFRLLGQTSVDRLLQLSQGQAVKGNQLLPVSLVKRKTTLA"
