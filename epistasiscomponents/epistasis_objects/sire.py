@@ -1,8 +1,9 @@
 import random
+import pandas as pd
 
 #make this more concise later
 from epistasiscomponents.epistasis_functions.gene_functions import create_gene_ndxs
-from epistasiscomponents.epistasis_functions.constants import AMINO_ACIDS, DDG
+from epistasiscomponents.constants import AMINO_ACIDS, DDG
 from epistasiscomponents.epistasis_functions.energy_functions import dg_obs
 
 class Sire:
@@ -16,8 +17,7 @@ class Sire:
         self.sequence = sequence
         self.name = name
         self.potential_progeny = []
-        self.wt_nrg = dg_obs()
-
+        
     #in the future may want to add progeny size as a parameter
     def create_mutant(self , no_mutations):
         #rewrite this to how this actually works now
@@ -59,10 +59,14 @@ class Sire:
 
         energies = []
 
+        #may want to keep summary statistics seperate could make faster to parse through
         for mutant in self.potential_progeny:
-            energies.append(DDG.loc[mutant])
-            energies.append(mutant.sum())
-        
+            energy = pd.concat([DDG.loc[mutant], DDG.loc[mutant].sum(axis=0)], axis=1)
+            energies.append(energy)
+
+
+        #for energy in energies:
+        #    pd.concat([energy, energy.sum(axis=0)])
 
 
         return energies

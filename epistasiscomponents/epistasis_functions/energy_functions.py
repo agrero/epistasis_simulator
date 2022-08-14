@@ -1,6 +1,6 @@
 import numpy as np
 import epistasiscomponents
-from epistasis_functions.constants import G_H, G_L2E, G_HDNA, MU_IPTG_RANGE, BETA, MU_OPERATOR, LOW_IPTG, HIGH_IPTG, MAX_ON, MIN_OFF
+from epistasiscomponents.constants import G_H, G_L2E, G_HDNA, MU_IPTG_RANGE, BETA, MU_OPERATOR, LOW_IPTG, HIGH_IPTG, MAX_ON, MIN_OFF
 
 def relative_populations(dG_h=0,
          dG_l2e=0,
