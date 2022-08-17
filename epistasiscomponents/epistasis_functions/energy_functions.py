@@ -1,6 +1,7 @@
 import numpy as np
 import epistasiscomponents
 from epistasiscomponents.constants import G_H, G_L2E, G_HDNA, MU_IPTG_RANGE, BETA, MU_OPERATOR, LOW_IPTG, HIGH_IPTG, MAX_ON, MIN_OFF
+import pandas as pd
 
 def relative_populations(dG_h=0,
          dG_l2e=0,
@@ -73,8 +74,9 @@ def dg_obs(dG_h=0,
     
     return -(1/beta)*np.log(w_hdna/(w_h + w_l2e))
 
-#This will need to be changed, what i'm thinking now is just reorganize it so that it will just calculate the effect of one mutation
-#then compare it to the wildtype tbh I don't really know but it'll probably be something like that
+
+
+#I think to mimimize hte requ
 def epistasis_vs_iptg(dG_h_m1,
                       dG_l2e_m1,
                       dG_hdna_m1,
@@ -176,10 +178,6 @@ def epistasis_vs_iptg(dG_h_m1,
     
     return mag, sign1, sign2
 
-#this is hhow they created the ddg.csv 
-#i'm thinking of having it randomly pick an index and try all mutations
-#Then after that index is picked, remove it from the list
-#Lookup: df.loc, enumerate, np.unique
 """
 # Create dictionary keying mutation to their energetic effects on each state
 unique_muts, unique_indexes = np.unique(df.m1,return_index=True)#np.unique(muts[:,1],return_index=True)
@@ -317,5 +315,13 @@ for mutant_round in range(3):
     for n in tqdm(narrow[-2]):
         no_pass, narrow_pass = mutate_background(mutant_energies,
                                                  current_mutant=n,
-                                                 low_iptg=NARROW_LOW_IPTG,high_iptg=NARROW_HIGH_IPTG)
+                                           low_iptg=NARROW_LOW_IPTG,high_iptg=NARROW_HIGH_IPTG)
         narrow[-1].extend(narrow_pass) """
+
+def create_totals(h_total, l2e_total, hdna_total):
+    nrg_sums = {
+        'h' : h_total,
+        'l2e' : l2e_total,
+        'hdna' : hdna_total
+    }
+    return pd.DataFrame(nrg_sums)
