@@ -1,5 +1,6 @@
 import random
 import pandas as pd
+import numpy as np
 
 #make this more concise later
 from epistasiscomponents.epistasis_functions.gene_functions import create_gene_ndxs
@@ -24,7 +25,7 @@ class Sire:
         #100% can make the filter a df query
         self.nrg_totals = []
 
-        self.mutant_pop_distribution = [] 
+        self.mutant_pop_distro = [] 
 
         self.no_pass_mutants = []
         self.broad_pass_mutants = []
@@ -86,7 +87,7 @@ class Sire:
             }
             total_format = pd.DataFrame(totals, index = [f'{count}'])
             energy_totals.append(total_format)
-            #totals = energy.iloc[:,0:].sum()
+
             count += 1
 
         self.nrg_totals.append(pd.concat(energy_totals))
@@ -98,25 +99,30 @@ class Sire:
         Returns a population distribution of each of the 3 forms of each mutant.
         """
 
-        distribution = []
+        totals = self.nrg_totals[0]
+        totals_mixed = totals.apply(lambda row: relative_populations(
+            dG_h=row['h'], dG_l2e=row['L2E'], dG_hdna=row['hdna'],
+            mu_iptg=np.array([LOW_IPTG,HIGH_IPTG])
+        ), axis=1)
+        distro = pd.DataFrame(totals_mixed.to_list(), columns=['h', 'l2e', 'hdna'], index=totals_mixed.index)
+        self.mutant_pop_distro = distro
 
-        #replace with apply later
-        for energy in self.nrgs:
-           dist = relative_populations(dG_h=energy[1],
-                                       dG_hdna=energy[0],
-                                       dG_l2e=energy[2])
-           self.mutant_pop_distribution.append(dist)
-
-    def mut_background(self,
-                       low_iptg=LOW_IPTG, high_iptg=HIGH_IPTG,
-                       low_max_on=MAX_ON, high_min_off=MIN_OFF):
+    def mut_background(self, low_max_on=MAX_ON, high_min_off=MIN_OFF):
         """
         From generated mutant progeny test mutants for viability and screening conditions,
-        more to be added later :d
+        more to be added later :d.
         """
 
-        
-
+        hdna_pop_dist_split = pd.DataFrame(self.mutant_pop_distro.hdna.to_list(), 
+                                           columns=['pre', 'post'], 
+                                           index=self.mutant_pop_distro.index)
+        #the important thing to take from here is the indices as they correlate specifically to the mutants
+        return hdna_pop_dist_split.query(f'pre > {low_max_on} and post < {high_min_off}')
+    
+    #Next step would be to generate a fasta of all sequences that pass the screen and then 
+    #using biopython write the sequences to a fasta. Then using biopython's muscle alg
+    #align the fasta writing it as a .aln file. Maybe (most likely) Mike will have the best
+    #way to do this but try your method first
     def __str__(self) -> str:
         return """
 Name: {}
