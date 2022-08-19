@@ -7,6 +7,8 @@ from epistasiscomponents.epistasis_functions.gene_functions import create_gene_n
 from epistasiscomponents.constants import AMINO_ACIDS, DDG, HIGH_IPTG, LOW_IPTG, MAX_ON, MIN_OFF
 from epistasiscomponents.epistasis_functions.energy_functions import dg_obs, relative_populations
 
+from Bio.Align.Applications import MuscleCommandline
+
 class Sire:
 
     #this is also innaccurate
@@ -51,12 +53,15 @@ class Sire:
         mutant = []
 
         for mutation in range(no_mutations): #theres that enumerate thing that hsould go here
-
                 mutant_acid = random.choice(AMINO_ACIDS)
                 mutant_ndx = random.choice(gene_ndxs)
+                if mutant_acid == self.sequence[mutant_ndx]:
+                    new_list = list(AMINO_ACIDS)
+                    new_list.remove(mutant_acid)
+                    mutant_acid = random.choice(new_list)
                 gene_ndxs.remove(mutant_ndx)
 
-                mutation = f"{self.sequence[mutant_ndx]}{mutant_ndx+1}{mutant_acid}" 
+                mutation = f"{self.sequence[mutant_ndx]} {mutant_ndx+1} {mutant_acid}" 
                 mutant.append(mutation)
         
         self.progeny.append(mutant)
@@ -118,7 +123,13 @@ class Sire:
                                            index=self.mutant_pop_distro.index)
         #the important thing to take from here is the indices as they correlate specifically to the mutants
         return hdna_pop_dist_split.query(f'pre > {low_max_on} and post < {high_min_off}')
+
+    def align_mutants(self):
+        """
+        Takes the current mutants and aligns the sequences using the MSUCLE algorithm.
+        """
     
+
     #Next step would be to generate a fasta of all sequences that pass the screen and then 
     #using biopython write the sequences to a fasta. Then using biopython's muscle alg
     #align the fasta writing it as a .aln file. Maybe (most likely) Mike will have the best
