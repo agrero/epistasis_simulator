@@ -45,7 +45,7 @@ class Sire:
 
         mutant = []
 
-        for mutation in range(no_mutations): #theres that enumerate thing that hsould go here
+        for mutation in range(no_mutations): 
                 mutant_acid = random.choice(AMINO_ACIDS)
                 mutant_ndx = random.choice(gene_ndxs)
                 if mutant_acid == self.sequence[mutant_ndx]:

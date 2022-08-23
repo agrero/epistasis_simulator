@@ -23,8 +23,13 @@ def create_gene_ndxs(ran:range) -> list:
     return gene_ndxs
 
 def mut_seq(sequence, mut_list):
-    mut_seq = MutableSeq(sequence)
-    for mut in mut_list: #may have to remove that 0
+    """
+    Takes an input sequence and an array of mutatations (a list may also work),
+    and changes the sequence accordingly. Returns mutated sequence.
+    """
+    mut_seq = list(sequence)
+    for mut in list(mut_list):
         mut_ndx = int(mut[1:-1])
-        mut_seq[mut_ndx] = mut[-1]
-    return  ''.join(mut_seq)
+        mut_seq[mut_ndx-1] = mut[-1]        
+    return ''.join(mut_seq)
+
