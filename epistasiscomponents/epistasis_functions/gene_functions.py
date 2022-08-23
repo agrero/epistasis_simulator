@@ -1,3 +1,5 @@
+import pandas as pd
+from Bio.Seq import MutableSeq
 
 def mutate(sequence:str, mutation:tuple) -> str:
     """
@@ -14,8 +16,15 @@ def mutate(sequence:str, mutation:tuple) -> str:
     mutation_pieces = [sequence[0:mutation[0]], mutation[1], sequence[mutation[0]+1:]]
     return ''.join(mutation_pieces)
  
-def create_gene_ndxs(range:range) -> list:
+def create_gene_ndxs(ran:range) -> list:
     gene_ndxs = []
-    for i in range:
+    for i in ran:
         gene_ndxs.append(i)
     return gene_ndxs
+
+def mut_seq(sequence, mut_list):
+    mut_seq = MutableSeq(sequence)
+    for mut in mut_list: #may have to remove that 0
+        mut_ndx = int(mut[1:-1])
+        mut_seq[mut_ndx] = mut[-1]
+    return  ''.join(mut_seq)

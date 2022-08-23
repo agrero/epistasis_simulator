@@ -3,11 +3,9 @@ import pandas as pd
 import numpy as np
 
 #make this more concise later
-from epistasiscomponents.epistasis_functions.gene_functions import create_gene_ndxs
+from epistasiscomponents.epistasis_functions.gene_functions import create_gene_ndxs, mut_seq
 from epistasiscomponents.constants import AMINO_ACIDS, DDG, HIGH_IPTG, LOW_IPTG, MAX_ON, MIN_OFF
-from epistasiscomponents.epistasis_functions.energy_functions import dg_obs, relative_populations
-
-from Bio.Align.Applications import MuscleCommandline
+from epistasiscomponents.epistasis_functions.energy_functions import dg_obs, mutate_background, relative_populations
 
 class Sire:
 
@@ -19,19 +17,14 @@ class Sire:
 
         self.sequence = sequence
         self.name = name
-        self.progeny = []
+        self.mutation_list = []
+        self.progeny = ''
 
         self.nrgs = []
-        #need to edit the energy method in order to organize this in a way which total(i) is the index and 
-        #the columns are hdna, h, and l2e
-        #100% can make the filter a df query
+
         self.nrg_totals = []
 
         self.mutant_pop_distro = [] 
-
-        self.no_pass_mutants = []
-        self.broad_pass_mutants = []
-        self.narrow_pass_mutants = []
         
     #in the future may want to add progeny size as a parameter
     def create_mutant(self, no_mutations):
@@ -61,18 +54,23 @@ class Sire:
                     mutant_acid = random.choice(new_list)
                 gene_ndxs.remove(mutant_ndx)
 
-                mutation = f"{self.sequence[mutant_ndx]} {mutant_ndx+1} {mutant_acid}" 
+                mutation = f"{self.sequence[mutant_ndx]}{mutant_ndx+1}{mutant_acid}" 
                 mutant.append(mutation)
         
-        self.progeny.append(mutant)
+        self.mutation_list.append(mutant)
+
+    def generate_progeny(self):
+        mut_input = pd.DataFrame(self.mutation_list)
+        mut_input['mut seq'] = mut_input.apply(lambda x: mut_seq(self.sequence, x), axis=1)
+        return mut_input
 
     def get_mutant_energies(self):
         """
         Returns a list of mutation energies as derived from the ddg.csv. The mutations are 
-        taken from the self.progeny.
+        taken from the self.mutation_list.
         """
 
-        if len(self.progeny) == 0:
+        if len(self.mutation_list) == 0:
             raise Exception("You cannot get a mutant's energy without any mutants.\n Call .create_mutant first.")
 
         energy_totals = []
@@ -80,7 +78,7 @@ class Sire:
         #should really figure out that enumerate thing
         #this is 100% the bottleneck
         count = 1
-        for mutant in self.progeny:
+        for mutant in self.mutation_list:
             energy = DDG.loc[mutant] 
             self.nrgs.append(energy)
             
@@ -124,16 +122,6 @@ class Sire:
         #the important thing to take from here is the indices as they correlate specifically to the mutants
         return hdna_pop_dist_split.query(f'pre > {low_max_on} and post < {high_min_off}')
 
-    def align_mutants(self):
-        """
-        Takes the current mutants and aligns the sequences using the MSUCLE algorithm.
-        """
-    
-
-    #Next step would be to generate a fasta of all sequences that pass the screen and then 
-    #using biopython write the sequences to a fasta. Then using biopython's muscle alg
-    #align the fasta writing it as a .aln file. Maybe (most likely) Mike will have the best
-    #way to do this but try your method first
     def __str__(self) -> str:
         return """
 Name: {}
