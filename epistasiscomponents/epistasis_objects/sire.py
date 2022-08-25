@@ -2,6 +2,8 @@ import random
 import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 #make this more concise later
 from epistasiscomponents.epistasis_functions.gene_functions import create_gene_ndxs, mut_seq
 from epistasiscomponents.constants import AMINO_ACIDS, DDG, HIGH_IPTG, LOW_IPTG, MAX_ON, MIN_OFF
@@ -23,6 +25,7 @@ class Sire:
         self.nrgs = []
 
         self.nrg_totals = []
+        self.screened_nrg_totals = ''
 
         self.mutant_pop_distro = [] 
         
@@ -120,7 +123,36 @@ class Sire:
                                            columns=['pre', 'post'], 
                                            index=self.mutant_pop_distro.index)
         #the important thing to take from here is the indices as they correlate specifically to the mutants
-        return hdna_pop_dist_split.query(f'pre > {low_max_on} and post < {high_min_off}')
+        screen_pass = hdna_pop_dist_split.query(f'pre > {low_max_on} and post < {high_min_off}')
+        self.screened_nrg_totals = self.nrg_totals[0].loc[screen_pass.index]
+
+    def plot_3d(self, rotate=False):
+        fig = plt.figure()
+        ax = fig.add_subplot(projection = '3d')
+
+        xs = self.screened_nrg_totals.loc[:,'h']
+        ys = self.screened_nrg_totals.loc[:,'L2E']
+        zs = self.screened_nrg_totals.loc[:,'hdna']
+        ax.scatter(xs, ys, zs)
+
+        xf = np.linspace(0, 100)
+        yf = np.linspace(0, 100)
+        zf = np.linspace(0, 100)
+        ax.plot(xf,yf,zf)
+
+
+        ax.set_xlabel('h')
+        ax.set_ylabel('L2E')
+        ax.set_zlabel('hdna')
+
+        if rotate:
+            for angle in range(0, 360):
+                ax.view_init(10,angle)
+                plt.draw()
+                plt.pause(.001)
+        else:
+            plt.show()
+        plt.close()
 
     def __str__(self) -> str:
         return """
