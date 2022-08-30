@@ -5,9 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #make this more concise later
-from epistasiscomponents.epistasis_functions.gene_functions import create_gene_ndxs, mut_seq
-from epistasiscomponents.constants import AMINO_ACIDS, DDG, HIGH_IPTG, LOW_IPTG, MAX_ON, MIN_OFF
+from epistasiscomponents.epistasis_functions.gene_functions import create_gene_ndxs, generate_mutant_dataframe, get_samples, mut_seq
+from epistasiscomponents.constants import AMINO_ACIDS, DDG, HIGH_IPTG, LAC_SEQ, LOW_IPTG, MAX_ON, MIN_OFF
 from epistasiscomponents.epistasis_functions.energy_functions import dg_obs, mutate_background, relative_populations
+from epistasiscomponents.errors import existence_check
 
 class Sire:
 
@@ -28,6 +29,17 @@ class Sire:
         self.screened_nrg_totals = ''
 
         self.mutant_pop_distro = [] 
+
+        self.exist_check = {
+            'sequence' : existence_check(self.sequence),
+            'name' : existence_check(self.name),
+            'mutation list' : existence_check(self.mutation_list),
+            'progeny' : existence_check(self.progeny),
+            'energies' : existence_check(self.nrgs),
+            'energy totals' : existence_check(self.nrg_totals),
+            'screened energy totals' : existence_check(self.screened_nrg_totals),
+            'mutant population distro' : existence_check(self.mutant_pop_distro)
+        }
         
     #in the future may want to add progeny size as a parameter
     def create_mutant(self, no_mutations):
@@ -60,7 +72,17 @@ class Sire:
                 mutation = f"{self.sequence[mutant_ndx]}{mutant_ndx+1}{mutant_acid}" 
                 mutant.append(mutation)
         
-        self.mutation_list.append(mutant)
+        self.mutation_list = mutant
+
+    def create_mutant_v2(self, no_mutations:int, progeny_size:int):
+        """
+        Stuff goes here! Much stuff. Informative stuff! More than what is currently here!
+        """
+        mut_df = generate_mutant_dataframe(self.sequence)
+        samples = get_samples(no_mutations, progeny_size, mut_df)
+
+        self.mutation_list = samples
+        
 
     def generate_progeny(self):
         mut_input = pd.DataFrame(self.mutation_list)
@@ -98,6 +120,12 @@ class Sire:
 
         self.nrg_totals.append(pd.concat(energy_totals))
 
+    def get_mutant_energies_v2(self):
+
+        if len(self.mutation_list) == 0:
+            raise Exception("You cannot get a mutant's energy without any mutants.\n Call .create_mutant first.")
+
+        
     #figure out how to vectorize later (Q and D answer right here)
     #honestly this is somewhat uneccesarry
     def get_mutant_distribution(self):
@@ -131,19 +159,19 @@ class Sire:
         ax = fig.add_subplot(projection = '3d')
 
         xs = self.screened_nrg_totals.loc[:,'h']
-        ys = self.screened_nrg_totals.loc[:,'L2E']
-        zs = self.screened_nrg_totals.loc[:,'hdna']
+        ys = self.screened_nrg_totals.loc[:,'hdna']
+        zs = self.screened_nrg_totals.loc[:,'L2E']
         ax.scatter(xs, ys, zs)
 
         xf = np.linspace(0, 100)
         yf = np.linspace(0, 100)
         zf = np.linspace(0, 100)
-        ax.plot(xf,yf,zf)
+        ax.plot(xf,yf,zf, 'r')
 
 
         ax.set_xlabel('h')
-        ax.set_ylabel('L2E')
-        ax.set_zlabel('hdna')
+        ax.set_ylabel('hdna')
+        ax.set_zlabel('L2E')
 
         if rotate:
             for angle in range(0, 360):
