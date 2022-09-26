@@ -3,7 +3,7 @@ import pandas as pd
 
 BETA =  (1/(298*0.001987)) # energy units in kcal/mol
 MU_OPERATOR =  0 # operator chemical potential is 10 kcal/mol
-G_H =          0 # h form is favored 
+G_H =          15 # h form is favored 
 G_L2E  =       10 # 12e form is destabilized by 10 kcal/mol (@ IPTG Kd)
 G_HDNA =       20 # hdna form destabilized by 20 kcal/mol (@ IPTG Kd and peptide Kd)
 MU_IPTG_RANGE = np.arange(-2,12.1,.1) # IPTG chemical potential range for calculations in kcal/mol
@@ -33,7 +33,7 @@ AMINO_ACIDS = ('G', 'A', 'L', 'M', 'F',
                'H', 'R', 'N', 'D', 'T')
 
 #ddg for all possible mutations in the lac repressor
-DDG = pd.read_csv("epistasiscomponents//ddg.csv", index_col=0)
+DDG = pd.read_csv("epistasiscomponents//ddg.csv")
 
 #The lac repressor amino sequence is here becuase it's ugly to look at
 LAC_SEQ = "LLIGVATSSLALHAPSQIVAAIKSRADQLGASVVVSMVERSGVEACKTAVHNLLAQRVSGLIINYPLDDQDAIAVEAACTNVPALFLDVSDQTPINSIIFSHEDGTRLGVEHLVALGHQQIALLAGPLSSVSARLRLAGWHKYLTRNQIQPIAEREGDWSAMSGFQQTMQMLNEGIVPTAMLVANDQMALGAMRAITESGLRVGADISVVGYDDTEDSSCYIPPLTTIKQDFRLLGQTSVDRLLQLSQGQAVKGNQLLPVSLVKRKTTLA"

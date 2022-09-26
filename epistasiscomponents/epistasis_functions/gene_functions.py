@@ -101,11 +101,23 @@ def get_samples(no_mutations, no_mutants, mutant_df):
 
     tuples = list(zip(*arrays))
     
-    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+    index = pd.MultiIndex.from_tuples(tuples, names=['mutant', 'mutation'])
    
     s = pd.Series(np.array(mutant_df.loc[mutations]), index = index)
-
 
     return s
 
 
+def clever_column_rename(dataframe):
+    """Im not 100% sold on the name"""
+    no_col = len(dataframe.columns)
+    
+    names = []
+    count = 0
+    for i in range(no_col-3):
+        mut_no = f'mut{count}'
+        names.append(mut_no)
+        count += 1
+    names += ['hdna', 'h', 'l2e']
+
+    return names
