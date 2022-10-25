@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from epistasiscomponents.epistasis_functions.gene_functions import clever_column_rename, create_gene_ndxs, generate_mutant_dataframe, get_samples, mut_seq
 from epistasiscomponents.constants import AMINO_ACIDS, DDG, G_H, G_HDNA, G_L2E, HIGH_IPTG, LAC_SEQ, LOW_IPTG, MAX_ON, MIN_OFF
 from epistasiscomponents.epistasis_functions.energy_functions import dg_obs, mutate_background, relative_populations
-from epistasiscomponents.errors import existence_check
+
 
 class Sire:
     """
@@ -34,24 +34,14 @@ class Sire:
         self.valid_background = ''
         self.trajectories = []
 
-        self.exist_check = {
-            'sequence' : existence_check(self.sequence),
-            'name' : existence_check(self.name),
-            'mutation list' : existence_check(self.mutation_list),
-            'progeny' : existence_check(self.progeny),
-            'energies' : existence_check(self.nrgs),
-            'energy totals' : existence_check(self.nrg_totals),
-            'screened energy totals' : existence_check(self.screened_nrg_totals),
-            'mutant population distro' : existence_check(self.mutant_pop_distro)
-        }
     
-    def create_valid_background(self, no_bgs):
+    def create_valid_background(self, no_init_bgs):
         valid_m1_bg = self.ddg.query(f'hdna < {G_HDNA} and h < {G_H} and l2e < {G_L2E}')
         
         all_ndxs = list(range(len(valid_m1_bg)))
         ndx = []
-        no_iter = no_bgs
-        if no_bgs > len(all_ndxs):
+        no_iter = no_init_bgs
+        if no_init_bgs > len(all_ndxs):
             no_iter = len(all_ndxs)
             print(f'The number of backgrounds chosen is more than there are available, defaulting to: {len(all_ndxs)}')
 
@@ -59,14 +49,14 @@ class Sire:
             ndx.append(all_ndxs.pop(random.randint(0, len(all_ndxs)-1)))
         self.valid_background = valid_m1_bg.iloc[ndx,:]
    
-    def new_iter_trajectory(self, no_bgs, no_iter_bgs, no_iterations=1):
+    def new_iter_trajectory(self, no_init_bgs, no_iter_bgs, no_generations=1):
         valid_bg = pd.DataFrame(np.repeat(self.valid_background.values, len(self.ddg), axis=0), columns=self.valid_background.columns)
         y = valid_bg.groupby(by='mut', group_keys=True).apply(lambda x: x)
-        count = no_iterations
-        no_bgs = no_bgs
+        count = no_generations - 1
+        no_init_bgs = no_init_bgs
         #switch to len(valid_bg) once two iterations work
 
-        ddg_replicate_2 = pd.concat([self.ddg]*no_bgs, ignore_index=True).rename({'mut':'mut1','hdna':'hdna1','h':'h1','l2e':'l2e1'}, axis=1)
+        ddg_replicate_2 = pd.concat([self.ddg]*no_init_bgs, ignore_index=True).rename({'mut':'mut1','hdna':'hdna1','h':'h1','l2e':'l2e1'}, axis=1)
         new_trajectory = pd.concat([y, ddg_replicate_2], axis=1, ignore_index=True).rename({0:'bg',1:'hdna',2:'h',3:'l2e',
                                                                                             4:'mut1',5:'hdna1',6:'h1',7:'l2e1'}, axis=1)
         new_trajectory = new_trajectory.assign(hdna_sum=lambda x: x.hdna + x.hdna1,
@@ -84,20 +74,19 @@ class Sire:
             col_names = clever_column_rename(new_values)
             s = pd.DataFrame(np.array(new_values), columns=col_names)
             s = s.drop_duplicates()
-            self.trajectories.append(s)
-            #change the input here 
 
-            no_bgs = no_iter_bgs
-            #set this equal to the number of bg indices
-            #from here multiply the ddg file by this number and merge them
-            #from there you can do the query method to eliminate invalids
+            no_init_bgs = no_iter_bgs
             
             ndx_choices = []
-
             for i in range(no_iter_bgs):
                 ndx_choices.append(random.choice(list(range(len(s))))) 
 
             pre_new_trajectory = pd.DataFrame(s.iloc[ndx_choices])
+            self.trajectories.append(pre_new_trajectory)
+            #change the input here 
+
+            no_init_bgs = no_iter_bgs
+
             mut_no = f'mut{pre_new_trajectory.shape[1]-3}'
             ddg_replicate = pd.concat([self.ddg]*len(pre_new_trajectory.index), ignore_index=True).rename({'mut':mut_no,'hdna':'hdna1','h':'h1',
                                                                                                            'l2e': 'l2e1',}, axis=1)
@@ -108,6 +97,23 @@ class Sire:
                                                l2e_sum=lambda x: x.l2e + x.l2e1).query(f'hdna_sum < {G_HDNA} and h_sum < {G_H} and l2e_sum < {G_L2E}')
 
             count -= 1
+        to_drop = ['hdna', 'h', 'l2e', 'hdna1', 'h1', 'l2e1']
+        new_values = new_trajectory.drop(to_drop, axis=1)
+
+        col_names = clever_column_rename(new_values)
+        s = pd.DataFrame(np.array(new_values), columns=col_names)
+        s = s.drop_duplicates()
+
+        ndx_choices = []
+
+        for i in range(no_iter_bgs):
+            ndx_choices.append(random.choice(list(range(len(s)))))
+
+        pre_new_trajectory = pd.DataFrame(s.iloc[ndx_choices]) 
+
+        self.trajectories.append(pre_new_trajectory)
+
+        
     #in the future may want to add progeny size as a parameter
     def create_mutant(self, no_mutations):
         #rewrite this to how this actually works now
