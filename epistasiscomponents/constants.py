@@ -3,16 +3,16 @@ import pandas as pd
 
 BETA =  (1/(298*0.001987)) # energy units in kcal/mol
 MU_OPERATOR =  0 # operator chemical potential is 10 kcal/mol
-G_H =          15 # h form is favored 
+G_H =          0 # h form is favored 
 G_L2E  =       10 # 12e form is destabilized by 10 kcal/mol (@ IPTG Kd)
-G_HDNA =       20 # hdna form destabilized by 20 kcal/mol (@ IPTG Kd and peptide Kd)
+G_HDNA =       0 # hdna form destabilized by 20 kcal/mol (@ IPTG Kd and peptide Kd)
 MU_IPTG_RANGE = np.arange(-2,12.1,.1) # IPTG chemical potential range for calculations in kcal/mol
 conv = 1 # no conversion to other energy units (assumes Rosetta energy units are ~ kcal/mol. Kellogg et al, 2011).
 
 #IPTG chemical potentials where cutoffs will be calculated for broad screen
 
 LOW_IPTG = 0
-HIGH_IPTG = 10
+HIGH_IPTG = 1
 
 
 #IPTG chemical potentials where cutoffs will be calculated for narrow screen

@@ -3,12 +3,12 @@ import random
 import pandas as pd
 import numpy as np
 import os
+import plotly.graph_objects as go
 
-import matplotlib.pyplot as plt
 
 #make this more concise later
 from epistasiscomponents.epistasis_functions.gene_functions import clever_column_rename, create_gene_ndxs, generate_mutant_dataframe, get_samples, mut_seq
-from epistasiscomponents.constants import AMINO_ACIDS, DDG, G_H, G_HDNA, G_L2E, HIGH_IPTG, LAC_SEQ, LOW_IPTG, MAX_ON, MIN_OFF
+from epistasiscomponents.constants import AMINO_ACIDS, DDG, G_H, G_HDNA, G_L2E, HIGH_IPTG, LAC_SEQ, LOW_IPTG, MAX_ON, MIN_OFF, NARROW_HIGH_IPTG, NARROW_LOW_IPTG
 from epistasiscomponents.epistasis_functions.energy_functions import dg_obs, mutate_background, relative_populations
 
 
@@ -34,7 +34,9 @@ class Sire:
         self.valid_background = ''
         self.trajectories = []
 
-    
+        self.broad = []
+        self.narrow = []
+
     def create_valid_background(self, no_init_bgs):
         valid_m1_bg = self.ddg.query(f'hdna < {G_HDNA} and h < {G_H} and l2e < {G_L2E}')
         
@@ -215,6 +217,40 @@ class Sire:
         distro = pd.DataFrame(totals_mixed.to_list(), columns=['h', 'l2e', 'hdna'], index=totals_mixed.index)
         self.mutant_pop_distro = distro
 
+    def get_mutant_distribution_v2(self):
+        totals = self.trajectories
+        for i in totals:
+            #broad trajectories
+            totals_broad_mixed = i.apply(lambda row: relative_populations(
+                dG_h=row['h'], dG_l2e=row['l2e'], dG_hdna=row['hdna'],
+                mu_iptg=np.array([LOW_IPTG, HIGH_IPTG])
+            ), axis=1)
+            temp_broad_distro = pd.DataFrame(totals_broad_mixed.to_list(), columns=['h', 'l2e', 'hdna'], index=totals_broad_mixed.index)
+            l2e_broad_distro = pd.DataFrame(temp_broad_distro.l2e.to_list(), index = temp_broad_distro.index, columns=['L2E LOW IPTG', 'L2E HIGH IPTG'])
+            h_broad_distro = pd.DataFrame(temp_broad_distro.h.to_list(), index = temp_broad_distro.index, columns=['H LOW IPTG', 'H HIGH IPTG'])
+            hdna_broad_distro = pd.DataFrame(temp_broad_distro.hdna.to_list(), index= temp_broad_distro.index, columns=['HDNA LOW IPTG', 'HDNA HIGH IPTG'])
+            broad_distro = pd.concat([l2e_broad_distro, h_broad_distro, hdna_broad_distro], axis=1)
+
+            #wuery can't search for low
+            #broad_distro_2 = broad_distro.query(f'HDNA LOW IPTG > {MIN_OFF} and HDNA HIGH IPTG < {MAX_ON}')
+            self.broad.append(broad_distro)
+
+
+            totals_narrow_mixed = i.apply(lambda row: relative_populations(
+                dG_h=row['h'], dG_l2e=row['l2e'], dG_hdna=row['hdna'],
+                mu_iptg=np.array([NARROW_LOW_IPTG, NARROW_HIGH_IPTG])
+            ), axis=1)
+            temp_narrow_distro = pd.DataFrame(totals_narrow_mixed.to_list(), columns=['h', 'l2e', 'hdna'], index=totals_narrow_mixed.index)
+
+            l2e_narrow_distro = pd.DataFrame(temp_narrow_distro.l2e.to_list(), index = temp_narrow_distro.index, columns=['L2E LOW IPTG', 'L2E HIGH IPTG'])
+            h_narrow_distro = pd.DataFrame(temp_narrow_distro.h.to_list(), index = temp_narrow_distro.index, columns=['H LOW IPTG', 'H HIGH IPTG'])
+            hdna_narrow_distro = pd.DataFrame(temp_narrow_distro.hdna.to_list(), index= temp_narrow_distro.index, columns=['HDNA LOW IPTG', 'HDNA HIGH IPTG'])
+            
+            narrow_distro = pd.concat([l2e_narrow_distro, h_narrow_distro, hdna_narrow_distro], axis=1)
+            self.narrow.append(narrow_distro)
+
+            
+
     def mut_background(self, low_max_on=MAX_ON, high_min_off=MIN_OFF):
         """
         From generated mutant progeny test mutants for viability and screening conditions,
@@ -268,6 +304,28 @@ class Sire:
 
         plt.close()
 
+    def violin_plot(self):
+        fig = go.Figure()
+
+        narrow = self.narrow[0]
+        broad = self.broad[0]
+
+        fig.add_trace(go.Violin(
+            x=list(narrow.columns[2]),
+            y=narrow['HDNA LOW IPTG'],
+            legendgroup='Yes', scalegroup='Yes', name='Yes',
+            side='negative',
+            line_color='blue'))
+
+        fig.add_trace(go.Violin(x=list(broad.columns[2]),
+                                y=broad['HDNA LOW IPTG'],
+                                legendgroup='No', scalegroup='No', name='No',
+                                side='positive',
+                                line_color='orange')
+        )
+        fig.update_traces(meanline_visible=True)
+        fig.update_layout(violingap=0, violinmode='overlay')
+        fig.show()
 
     def __str__(self) -> str:
         return """
