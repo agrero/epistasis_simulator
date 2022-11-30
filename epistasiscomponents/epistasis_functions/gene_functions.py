@@ -121,3 +121,7 @@ def clever_column_rename(dataframe):
     names += ['hdna', 'h', 'l2e']
 
     return names
+
+def screen_mutants(dataframe):
+    genotype = dataframe['genotype']
+    

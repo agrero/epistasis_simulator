@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import os
 import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+from matplotlib_venn import venn2
 
 
 #make this more concise later
@@ -36,6 +38,11 @@ class Sire:
 
         self.broad = []
         self.narrow = []
+        self.broad_pass_dist = []
+        self.narrow_pass_dist = []
+        self.broad_pass_energies = []
+        self.narrow_pass_energies = []
+
 
     def create_valid_background(self, no_init_bgs):
         valid_m1_bg = self.ddg.query(f'hdna < {G_HDNA} and h < {G_H} and l2e < {G_L2E}')
@@ -54,16 +61,19 @@ class Sire:
     def new_iter_trajectory(self, no_init_bgs, no_iter_bgs, no_generations=1):
         valid_bg = pd.DataFrame(np.repeat(self.valid_background.values, len(self.ddg), axis=0), columns=self.valid_background.columns)
         y = valid_bg.groupby(by='mut', group_keys=True).apply(lambda x: x)
+        
         count = no_generations - 1
         no_init_bgs = no_init_bgs
         #switch to len(valid_bg) once two iterations work
 
         ddg_replicate_2 = pd.concat([self.ddg]*no_init_bgs, ignore_index=True).rename({'mut':'mut1','hdna':'hdna1','h':'h1','l2e':'l2e1'}, axis=1)
+
         new_trajectory = pd.concat([y, ddg_replicate_2], axis=1, ignore_index=True).rename({0:'bg',1:'hdna',2:'h',3:'l2e',
                                                                                             4:'mut1',5:'hdna1',6:'h1',7:'l2e1'}, axis=1)
         new_trajectory = new_trajectory.assign(hdna_sum=lambda x: x.hdna + x.hdna1,
                                                h_sum=lambda x: x.h + x.h1,
                                                l2e_sum=lambda x: x.l2e + x.l2e1).query(f'hdna_sum < {G_HDNA} and h_sum < {G_H} and l2e_sum < {G_L2E}')
+
         while count != 0:
 
             #dub_dex = [new_trajectory.loc[:,'bg'], list(new_trajectory.index)]
@@ -75,7 +85,9 @@ class Sire:
 
             col_names = clever_column_rename(new_values)
             s = pd.DataFrame(np.array(new_values), columns=col_names)
+
             s = s.drop_duplicates()
+
 
             no_init_bgs = no_iter_bgs
             
@@ -98,6 +110,7 @@ class Sire:
                                                h_sum=lambda x: x.h + x.h1,
                                                l2e_sum=lambda x: x.l2e + x.l2e1).query(f'hdna_sum < {G_HDNA} and h_sum < {G_H} and l2e_sum < {G_L2E}')
 
+
             count -= 1
         to_drop = ['hdna', 'h', 'l2e', 'hdna1', 'h1', 'l2e1']
         new_values = new_trajectory.drop(to_drop, axis=1)
@@ -112,6 +125,12 @@ class Sire:
             ndx_choices.append(random.choice(list(range(len(s)))))
 
         pre_new_trajectory = pd.DataFrame(s.iloc[ndx_choices]) 
+
+        pre_genotype = pre_new_trajectory.iloc[:, :-3].values.tolist()
+        genotype = [set((x)) for x in pre_genotype]
+
+        pre_new_trajectory['genotype'] = genotype
+        print(pre_new_trajectory)
 
         self.trajectories.append(pre_new_trajectory)
 
@@ -249,6 +268,8 @@ class Sire:
             narrow_distro = pd.concat([l2e_narrow_distro, h_narrow_distro, hdna_narrow_distro], axis=1)
             self.narrow.append(narrow_distro)
 
+        
+
             
 
     def mut_background(self, low_max_on=MAX_ON, high_min_off=MIN_OFF):
@@ -264,6 +285,29 @@ class Sire:
         screen_pass = hdna_pop_dist_split.query(f'pre > {low_max_on} and post < {high_min_off}')
         self.screened_nrg_totals = self.nrg_totals.loc[screen_pass.index]
 
+    def screen_mutants(self, low_max_on=MAX_ON, high_min_off=MIN_OFF):
+        #likely can do this in a more efficient way
+        for mutant_frame in enumerate(self.broad):
+            filter1 = mutant_frame[1]["HDNA LOW IPTG"] < low_max_on
+            filter2 = mutant_frame[1]["HDNA HIGH IPTG"] > high_min_off
+            mutant_frame[1].where(filter1, inplace=True)
+            mutant_frame[1].where(filter2, inplace=True)
+            self.broad_pass_dist.append(mutant_frame[1].dropna())
+
+            energies = self.trajectories[mutant_frame[0]].loc[mutant_frame[1].dropna().index]
+            self.broad_pass_energies.append(energies)
+        
+        for mutant_frame in enumerate(self.narrow):
+            filter1 = mutant_frame[1]["HDNA LOW IPTG"] < low_max_on
+            filter2 = mutant_frame[1]["HDNA HIGH IPTG"] > high_min_off
+            mutant_frame[1].where(filter1, inplace=True)    
+            mutant_frame[1].where(filter2, inplace=True)
+            self.narrow_pass_dist.append(mutant_frame[1].dropna())
+
+            energies = self.trajectories[mutant_frame[0]].loc[mutant_frame[1].dropna().index]
+            self.narrow_pass_energies.append(energies)
+        
+        
     def plot_3d(self, rotate=False, lin_max=100):
         fig = plt.figure(figsize= plt.figaspect(0.5))
         ax = fig.add_subplot(1, 2, 1, projection = '3d')

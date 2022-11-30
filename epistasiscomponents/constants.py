@@ -17,8 +17,8 @@ HIGH_IPTG = 1
 
 #IPTG chemical potentials where cutoffs will be calculated for narrow screen
 
-NARROW_LOW_IPTG = 3
-NARROW_HIGH_IPTG = 5
+NARROW_LOW_IPTG = .3
+NARROW_HIGH_IPTG = .5
 
 #MAX_ON: fx_hdna must be at least this at low screen point to pass
 #MIN_OFF: fx_hdna must be below this at high screen point to pass
