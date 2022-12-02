@@ -1,22 +1,27 @@
-from epistasiscomponents.constants import DDG, LAC_SEQ
-from epistasiscomponents.epistasis_objects.sire import Sire
+import epistasiscomponents.constants as con
+
 import pandas as pd
 import numpy as np
+
+from epistasiscomponents.epistasis_functions.gene_functions import position_check
+
 
 import matplotlib.pyplot as plt
 from matplotlib_venn import venn2
 
-sire = Sire(LAC_SEQ, 'lac', DDG)
+init_stuff = pd.Series([[5183, 2336], [3471, 3339], [1616, 743]])
+new_stuff = pd.Series([5182, 428, 1616])
+new_frame = pd.concat([init_stuff, new_stuff], axis=1)
 
-no_mutants = 100
+new_f = pd.DataFrame(new_frame.loc[:,0].tolist())
+new_f['end'] = new_stuff
 
-sire.create_valid_background(no_mutants)
+new_data = new_f.values.tolist()
 
-sire.new_iter_trajectory(10, 10, 3)
-#sire.get_mutant_distribution_v2()
-#sire.screen_mutants()
+new_new_f = pd.DataFrame([new_data])
+swap = new_new_f.swapaxes('columns', 'index')
 
-
+position_checked = swap.apply(lambda row: position_check(row), axis=1)
 
 
 #matching = []

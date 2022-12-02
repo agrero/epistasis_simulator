@@ -7,6 +7,30 @@ from Bio.Seq import MutableSeq
 
 from epistasiscomponents.constants import AMINO_ACIDS, LAC_SEQ
 
+
+def get_position(mutation_index):
+    """
+    Takes in a mutational index (or list of indices) and returns the amino acid position starting from 0.
+
+    mutation_index: either an integer or list of integers that will subsequently be returned as integers representing
+        amino acid posiion.
+    
+    """
+    if type(mutation_index) == set or type(mutation_index) == list:
+        mut_positions = []
+        for mut in mutation_index:
+            if mut % 20 == 0:
+                mut_positions.append(((mut - 1) // 20))
+            else:
+                mut_positions.append(mut // 20)
+        return mut_positions
+
+    if mutation_index % 20 == 0:
+        return (mutation_index - 1) // 20
+    else:
+        return mutation_index // 20
+
+
 def mutate(sequence:str, mutation:tuple) -> str:
     """
     Takes a tuple of two indices in the following format (O, M), and the sequence of which you want to mutate
@@ -107,7 +131,6 @@ def get_samples(no_mutations, no_mutants, mutant_df):
 
     return s
 
-
 def clever_column_rename(dataframe):
     """Im not 100% sold on the name"""
     no_col = len(dataframe.columns)
@@ -122,6 +145,23 @@ def clever_column_rename(dataframe):
 
     return names
 
-def screen_mutants(dataframe):
-    genotype = dataframe['genotype']
-    
+def degenerate_mutation_check(mutation_list):
+    """
+    Takes in a list of mutational indices from a ddg file. These are then tested to see if there is any repeat amino acid positions.
+    If there is a degenerate position, the older mutation is removed.
+    """
+    #generate a list of aa positions from the list of mutations
+    temp_mutation_list = list(mutation_list)[0]
+    position_list = [get_position(x) for x in temp_mutation_list]
+
+    #check the position list for degenerate mutations to be removed
+    repeats = []
+    for i,item in enumerate(position_list):
+        test_dex = position_list[:i] + position_list[i+1:]
+        if item in test_dex:
+            repeats.append(i)
+    if len(repeats) > 0:
+        del temp_mutation_list[repeats[0]]
+
+    #if there is degeneracy it'll return the truncated list, otherwise nothing happens
+    return temp_mutation_list

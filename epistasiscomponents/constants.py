@@ -1,6 +1,20 @@
 import numpy as np
 import pandas as pd
 
+def format_ddg(ddg, column_headers):
+    """
+    Reformat the indexing for ddg files to include an 'amino acid position' index.
+    """
+    individual_ndx = list(range(0,len(ddg)))
+    aa_ndx = list(range(0, len(ddg), 20)) * 20
+    aa_ndx.sort()
+    arrays = [aa_ndx, individual_ndx]
+    tuples = list(zip(*arrays))
+    
+    multi_dex = pd.MultiIndex.from_tuples(tuples, names=['amino acid', 'mut ndx'])
+
+    return pd.DataFrame(ddg.values, index=multi_dex, columns=column_headers)
+
 BETA =  (1/(298*0.001987)) # energy units in kcal/mol
 MU_OPERATOR =  0 # operator chemical potential is 10 kcal/mol
 G_H =          0 # h form is favored 
@@ -33,7 +47,8 @@ AMINO_ACIDS = ('G', 'A', 'L', 'M', 'F',
                'H', 'R', 'N', 'D', 'T')
 
 #ddg for all possible mutations in the lac repressor
-DDG = pd.read_csv("epistasiscomponents//ddg.csv")
+ddg_read = pd.read_csv("epistasiscomponents//ddg.csv")
+DDG = format_ddg(ddg_read, column_headers=['mut','hdna', 'h', 'l2e'])
 
 #The lac repressor amino sequence is here becuase it's ugly to look at
 LAC_SEQ = "LLIGVATSSLALHAPSQIVAAIKSRADQLGASVVVSMVERSGVEACKTAVHNLLAQRVSGLIINYPLDDQDAIAVEAACTNVPALFLDVSDQTPINSIIFSHEDGTRLGVEHLVALGHQQIALLAGPLSSVSARLRLAGWHKYLTRNQIQPIAEREGDWSAMSGFQQTMQMLNEGIVPTAMLVANDQMALGAMRAITESGLRVGADISVVGYDDTEDSSCYIPPLTTIKQDFRLLGQTSVDRLLQLSQGQAVKGNQLLPVSLVKRKTTLA"
