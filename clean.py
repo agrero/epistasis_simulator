@@ -83,7 +83,7 @@ def get_energies_from_genotype(genotype, ddg):
     genotype: a list of indices from the ddg file
     ddg: ddg file of a specific protein
     """
-    print(genotype)
+
     try:
         mut = ddg.iloc[genotype]
     except:
@@ -93,219 +93,22 @@ def get_energies_from_genotype(genotype, ddg):
     mut_sum = mut.sum()
 
     return mut_sum[1:]    
-            
-def evolve(ddg, no_mut_bg, no_mut_per_round=1, no_evolutionary_rounds=1, broad_rep=[], narrow_rep=[], low_max_on=MAX_ON, high_min_off=MIN_OFF):
-    """
-    Evolutionary simulation of energetic effects of mutatations to a protein sequence.
-    Mutants will be screened and placed into two different categories (broad or narrow)
-    based on the distribution of their thermodynamic ensembles. Evolutionary trajectories are then
-    represented as a venn diagram showing the similarities between the specific sequences located
-    in each screen.
-
-    ddg: Your ddg file specifying all energetic effects of mutations to your sequence
-    no_mut_bg: The number of initial mutations for the first mutants, IE double or triple.
-    no_mut_per_round: Number of mutants per round.
-    """
-    
-
-    #Creating a valid background
-    all_ndxs = list(range(len(ddg)))
-    #chagne to list comprehension later
-    ndxs = []
-    for i in range(no_mut_per_round):
-        ndx = []
-        for i in range(no_mut_bg):
-            #ndx.append(all_ndxs[random.randint(0, len(all_ndxs)-1)])
-            ndx.append(position_check(genotype=ndx, current_mutation= all_ndxs[random.randint(0, len(all_ndxs)-1)], first_pass=True, ndxs=all_ndxs))
-        ndxs.append(ndx)
-
-    init_trajectories = []
-    for i in ndxs:
-        if len(i) != no_mut_bg:
-            i.append(all_ndxs[random.randint(0, len(all_ndxs)-1)])
-     
-        mut = ddg.iloc[i, :]
- 
-        genotype = i
-        mut_nrgs = mut.iloc[:,1:]
-        mut_sum = mut_nrgs.sum()
-
-        mut_sum['genotype'] = genotype
-
-        init_trajectories.append(mut_sum)
-
-    y = pd.concat(init_trajectories, axis=1)
-    z = pd.DataFrame(y)
-    g = z.swapaxes('columns', 'index')
-    #background created
-
-    #get mutant distributions
-    #broad distributions
-    totals_broad_mixed = g.apply(lambda row: relative_populations(
-        dG_h=row['h'], dG_l2e=row['l2e'], dG_hdna=row['hdna'],
-        mu_iptg=np.array([LOW_IPTG, HIGH_IPTG])
-        ), axis=1)
-    temp_broad_distro = pd.DataFrame(totals_broad_mixed.to_list(), columns=['h', 'l2e', 'hdna'], index=totals_broad_mixed.index)
-    l2e_broad_distro = pd.DataFrame(temp_broad_distro.l2e.to_list(), index = temp_broad_distro.index, columns=['L2E LOW IPTG', 'L2E HIGH IPTG'])
-    h_broad_distro = pd.DataFrame(temp_broad_distro.h.to_list(), index = temp_broad_distro.index, columns=['H LOW IPTG', 'H HIGH IPTG'])
-    hdna_broad_distro = pd.DataFrame(temp_broad_distro.hdna.to_list(), index= temp_broad_distro.index, columns=['HDNA LOW IPTG', 'HDNA HIGH IPTG'])
-    init_broad_distro = pd.concat([l2e_broad_distro, h_broad_distro, hdna_broad_distro], axis=1)
-
-    #narrow distributions
-    totals_narrow_mixed = g.apply(lambda row: relative_populations(
-        dG_h=row['h'], dG_l2e=row['l2e'], dG_hdna=row['hdna'],
-        mu_iptg=np.array([NARROW_LOW_IPTG, NARROW_HIGH_IPTG])
-        ), axis=1)
-    temp_narrow_distro = pd.DataFrame(totals_narrow_mixed.to_list(), columns=['h', 'l2e', 'hdna'], index=totals_narrow_mixed.index)
-
-    l2e_narrow_distro = pd.DataFrame(temp_narrow_distro.l2e.to_list(), index = temp_narrow_distro.index, columns=['L2E LOW IPTG', 'L2E HIGH IPTG'])
-    h_narrow_distro = pd.DataFrame(temp_narrow_distro.h.to_list(), index = temp_narrow_distro.index, columns=['H LOW IPTG', 'H HIGH IPTG'])
-    hdna_narrow_distro = pd.DataFrame(temp_narrow_distro.hdna.to_list(), index= temp_narrow_distro.index, columns=['HDNA LOW IPTG', 'HDNA HIGH IPTG'])
-            
-    init_narrow_distro = pd.concat([l2e_narrow_distro, h_narrow_distro, hdna_narrow_distro], axis=1)
-    
-    n_and_b_distros = [init_broad_distro, init_narrow_distro]
-    #screen mutants
-    # the 0 index is for broad distro passes and the 1 index is for narrow distro passes    
-    init_screen_pass_ndxs = []
-
-    for mutant_frame in n_and_b_distros:
-        filter1 = mutant_frame["HDNA LOW IPTG"] < low_max_on
-        filter2 = mutant_frame["HDNA HIGH IPTG"] > high_min_off
-        mutant_frame.where(filter1, inplace=True)
-        mutant_frame.where(filter2, inplace=True)
-        init_screen_pass_ndxs.append(mutant_frame.dropna().index)
-        
-        #energies = self.trajectories[mutant_frame].loc[mutant_frame.dropna().index]
-        #self.broad_pass_energies.append(energies)
-
-
-    initial_broad_mutants = g.loc[init_screen_pass_ndxs[0]]
-    initial_narrow_mutants = g.loc[init_screen_pass_ndxs[1]]
-    #iterate and make more mutant progeny!
-    broad_muts = []
-    narrow_muts = []
-    broad_muts.append(initial_broad_mutants)
-    narrow_muts.append(initial_narrow_mutants)
-        
-
-    for iteration in range(no_evolutionary_rounds):
-        current_broad_mutants = broad_muts[-1]
-        current_narrow_mutants = narrow_muts[-1]
-
-        
-
-        ndxs.clear()
-        for i in range(no_mut_per_round):
-            ndxs.append(random.choice(all_ndxs))
-
-        broad_genotypes = current_broad_mutants.iloc[:,-1]
-        narrow_genotypes = current_narrow_mutants.iloc[:,-1]
-
-        new_broad_genotypes = []
-        new_narrow_genotypes = []
-
-
-        for i in broad_genotypes:
-            new = []
-            new.append(i)
-            #new.append(position_check(genotype=i, current_mutation=all_ndxs[random.randint(0, len(all_ndxs)-1)], first_pass=True, ndxs=ndxs))
-            new_broad_genotypes.append(new)
-
-        for j in narrow_genotypes:
-            j.append(position_check(genotype=j, current_mutation=all_ndxs[random.randint(0, len(all_ndxs)-1)], first_pass=True, ndxs=ndxs))
-            new_narrow_genotypes.append(j)
-        
-        broad_trajectories = []
-        for i in new_broad_genotypes:
-
-            mut = ddg.iloc[i[0], :]
-
-            genotype = i[0] 
-            mut_nrgs = mut.iloc[:,1:]
-            mut_sum = mut_nrgs.sum()
-            mut_sum['genotype'] = genotype
-
-            broad_trajectories.append(mut_sum)
-
-        narrow_trajectories = []
-        for i in new_narrow_genotypes:
-
-            mut = ddg.iloc[i, :]
-
-            genotype = i 
-            mut_nrgs = mut.iloc[:,1:]
-            mut_sum = mut_nrgs.sum()
-            mut_sum['genotype'] = genotype
-
-            narrow_trajectories.append(mut_sum)
-        
-
-        broad_trajectory_1 = pd.concat(broad_trajectories, axis=1)
-        narrow_trajectory_1 = pd.concat(narrow_trajectories, axis=1)
-
-        broad_trajectory_2 = pd.DataFrame(broad_trajectory_1).swapaxes('columns', 'index')
-        narrow_trajectory_2 = pd.DataFrame(narrow_trajectory_1).swapaxes('columns', 'index')
-
-        #distribution of new mutants
-
-        totals_broad_mixed = broad_trajectory_2.apply(lambda row: relative_populations(
-        dG_h=row['h'], dG_l2e=row['l2e'], dG_hdna=row['hdna'],
-        mu_iptg=np.array([LOW_IPTG, HIGH_IPTG])
-        ), axis=1)
-        temp_broad_distro = pd.DataFrame(totals_broad_mixed.to_list(), columns=['h', 'l2e', 'hdna'], index=totals_broad_mixed.index)
-
-        l2e_broad_distro = pd.DataFrame(temp_broad_distro.l2e.to_list(), index = temp_broad_distro.index, columns=['L2E LOW IPTG', 'L2E HIGH IPTG'])
-        h_broad_distro = pd.DataFrame(temp_broad_distro.h.to_list(), index = temp_broad_distro.index, columns=['H LOW IPTG', 'H HIGH IPTG'])
-        hdna_broad_distro = pd.DataFrame(temp_broad_distro.hdna.to_list(), index= temp_broad_distro.index, columns=['HDNA LOW IPTG', 'HDNA HIGH IPTG'])
-
-        broad_distro = pd.concat([l2e_broad_distro, h_broad_distro, hdna_broad_distro], axis=1)
-
-
-        totals_narrow_mixed = narrow_trajectory_2.apply(lambda row: relative_populations(
-            dG_h=row['h'], dG_l2e=row['l2e'], dG_hdna=row['hdna'],
-            mu_iptg=np.array([NARROW_LOW_IPTG, NARROW_HIGH_IPTG])
-            ), axis=1)
-        temp_narrow_distro = pd.DataFrame(totals_narrow_mixed.to_list(), columns=['h', 'l2e', 'hdna'], index=totals_narrow_mixed.index)
-
-        l2e_narrow_distro = pd.DataFrame(temp_narrow_distro.l2e.to_list(), index = temp_narrow_distro.index, columns=['L2E LOW IPTG', 'L2E HIGH IPTG'])
-        h_narrow_distro = pd.DataFrame(temp_narrow_distro.h.to_list(), index = temp_narrow_distro.index, columns=['H LOW IPTG', 'H HIGH IPTG'])
-        hdna_narrow_distro = pd.DataFrame(temp_narrow_distro.hdna.to_list(), index= temp_narrow_distro.index, columns=['HDNA LOW IPTG', 'HDNA HIGH IPTG'])
-            
-        narrow_distro = pd.concat([l2e_narrow_distro, h_narrow_distro, hdna_narrow_distro], axis=1)
-
-        #screening distributions
-        distros = [broad_distro, narrow_distro]
-
-        screen_pass_ndxs = []
-        for mutant_frame in distros:
-            filter1 = mutant_frame["HDNA LOW IPTG"] < low_max_on
-            filter2 = mutant_frame["HDNA HIGH IPTG"] > high_min_off
-            mutant_frame.where(filter1, inplace=True)
-            mutant_frame.where(filter2, inplace=True)
-            screen_pass_ndxs.append(mutant_frame.dropna().index)
-
-        broad_genos = broad_trajectory_2.loc[screen_pass_ndxs[0]]
-        narrow_genos = narrow_trajectory_2.loc[screen_pass_ndxs[1]]
-
-        broad_muts.append(broad_genos)
-        narrow_muts.append(narrow_genos)
-
-        current_broad_mutants = broad_genos
-        current_narrow_mutants = narrow_genos
-    print('broad')
-    for i in broad_muts:
-
-        print(i)
-    print('narrow')
-    for i in narrow_muts:
-
-        print(i)
 
 def evolve_v2(ddg, 
             no_mutations_background, no_mutations_per_round, no_evolutionary_rounds, 
             broad_repository, narrow_repository,
             low_max_on=MAX_ON, high_min_off=MIN_OFF):
+            """
+            Evolutionary simulation of energetic effects of mutatations to a protein sequence.
+            Mutants will be screened and placed into two different categories (broad or narrow)
+            based on the distribution of their thermodynamic ensembles. Evolutionary trajectories are then
+            represented as a venn diagram showing the similarities between the specific sequences located
+            in each screen.
+
+            ddg: Your ddg file specifying all energetic effects of mutations to your sequence
+            no_mut_bg: The number of initial mutations for the first mutants, IE double or triple.
+            no_mut_per_round: Number of mutants per round.
+            """
 
 
             #creating a valid background
@@ -392,9 +195,10 @@ def evolve_v2(ddg,
             narrow_muts.append(initial_narrow_mutants)
 
             for iteration in range(no_evolutionary_rounds):
+
                 current_broad_mutants = broad_muts[-1]
                 current_narrow_mutants = narrow_muts[-1]
-                
+    
                 ndxs = []
                 for i in range(no_mutations_per_round):
                     ndxs.append(random.choice(all_ndxs))
@@ -405,6 +209,7 @@ def evolve_v2(ddg,
 
                 # expanding ndxs for merging
                 broad_ndxs_repeat = ndxs * len(current_broad_mutants)
+
                 #broad_ndxs_repeat.sort()
                 narrow_ndxs_repeat = ndxs * len(current_narrow_mutants)
                 #narrow_ndxs_repeat.sort()
@@ -439,7 +244,7 @@ def evolve_v2(ddg,
                 broad_energy_genotype.rename(columns={0:'genotype'}, inplace=True)
                 narrow_energy_genotype.rename(columns={0:'genotype'}, inplace=True)
                 
-                 #getting mutant distributions
+                #getting mutant distributions
                 # broad distributions
                 totals_broad_mixed = mutational_background.apply(lambda row: relative_populations(
                     dG_h=row['h'], dG_l2e=row['l2e'], dG_hdna=row['hdna'],
@@ -452,6 +257,7 @@ def evolve_v2(ddg,
                 hdna_broad_distro = pd.DataFrame(temp_broad_distro.hdna.to_list(), index= temp_broad_distro.index, columns=['HDNA LOW IPTG', 'HDNA HIGH IPTG'])
 
                 current_broad_distro = pd.concat([l2e_broad_distro, h_broad_distro, hdna_broad_distro], axis=1)
+                
                 
                 # narrow distributions
                 totals_narrow_mixed = mutational_background.apply(lambda row: relative_populations(
@@ -469,18 +275,22 @@ def evolve_v2(ddg,
 
                 current_distros = [current_broad_distro, current_narrow_distro]
                 curr_screen_pass_ndxs = []
+                
                 #screen mutants
+               
                 for mutant_frame in current_distros:
                     filter1 = mutant_frame["HDNA LOW IPTG"] < low_max_on
                     filter2 = mutant_frame["HDNA HIGH IPTG"] > high_min_off
                     mutant_frame.where(filter1, inplace=True)
                     mutant_frame.where(filter2, inplace=True)
                     curr_screen_pass_ndxs.append(mutant_frame.dropna().index)
+                
 
                 current_broad_mutants = broad_energy_genotype.loc[curr_screen_pass_ndxs[0]]
                 current_narrow_mutants = narrow_energy_genotype.loc[curr_screen_pass_ndxs[1]]
                 
                 broad_muts.append(current_broad_mutants)
+                #print(current_broad_mutants)
                 narrow_muts.append(current_narrow_mutants)
                 
 
@@ -490,17 +300,17 @@ def evolve_v2(ddg,
 
 broad_r = []
 narrow_r = []
-evolve_v2(ddg=DDG, no_mutations_background=2, no_mutations_per_round=100, no_evolutionary_rounds=2, 
+evolve_v2(ddg=DDG, no_mutations_background=1, no_mutations_per_round=50, no_evolutionary_rounds=3, 
         broad_repository=broad_r, narrow_repository=narrow_r, low_max_on=MAX_ON, high_min_off=MIN_OFF)
-print('broad')
-for i in broad_r:
-    print(i)
-    print('\n')
-for i in narrow_r:
-    print(i)
-    print('\n')
+#print('broad')
+#for i in broad_r:
+#    print(i)
+#    print('\n')
+#for i in narrow_r:
+#    print(i)
+#    print('\n')
 
-print('i am a genius')
+#print('i am a genius')
         
 #evolve(DDG, no_mut_bg=2, no_mut_per_round=100, no_evolutionary_rounds=2, broad_rep=broad_r, narrow_rep=narrow_r)
 #print(broad_r)
