@@ -178,24 +178,6 @@ def epistasis_vs_iptg(dG_h_m1,
     
     return mag, sign1, sign2
 
-"""
-# Create dictionary keying mutation to their energetic effects on each state
-unique_muts, unique_indexes = np.unique(df.m1,return_index=True)#np.unique(muts[:,1],return_index=True)
-sorter = []
-for i, m in enumerate(unique_muts):
-    index = unique_indexes[i]
-    sorter.append((int(m[1:-1]),
-                   m,
-                   df.loc[index,"h_mean_dG_m1"],
-                   df.loc[index,"l2e_mean_dG_m1"],
-                   df.loc[index,"hdna_mean_dG_m1"]))
-sorter.sort()
-
-mutant_energies = {}
-for s in sorter:
-    mutant_energies[s[1]] = [s[2],s[3],s[4]]
-"""
-
 def mutate_background(mutant_energies,
                       current_mutant=None,
                       low_iptg=LOW_IPTG,high_iptg=HIGH_IPTG,
@@ -289,36 +271,10 @@ def mutate_background(mutant_energies,
             
     return no_pass, screen_pass
 
-
-#This is what takes up all the time and will probably jsut end up geting gotten rid of
-""" # Go through single and double point mutants. Start with "None" mutations
-fails = [[None]]
-broad = [[None]]
-narrow = [[None]]
-
-for mutant_round in range(2):
-    
-    # Screen all mutant pairs that passed the mid condition and put them 
-    # through the mid condition again
-    broad.append([])
-    for b in tqdm(broad[-2]):
-        no_pass, broad_pass = mutate_background(mutant_energies,
-                                                current_mutant=b,
-                                                low_iptg=LOW_IPTG,high_iptg=HIGH_IPTG)
-        broad[-1].extend(broad_pass)
-        
-for mutant_round in range(3):
-
-    # Screen all mutant pairs that passed the high condition and put them 
-    # through the high condition again
-    narrow.append([])
-    for n in tqdm(narrow[-2]):
-        no_pass, narrow_pass = mutate_background(mutant_energies,
-                                                 current_mutant=n,
-                                           low_iptg=NARROW_LOW_IPTG,high_iptg=NARROW_HIGH_IPTG)
-        narrow[-1].extend(narrow_pass) """
-
 def create_totals(h_total, l2e_total, hdna_total):
+    """
+    Function to total up all of the individual states energies.
+    """
     nrg_sums = {
         'h' : h_total,
         'l2e' : l2e_total,

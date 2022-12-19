@@ -26,7 +26,7 @@ conv = 1 # no conversion to other energy units (assumes Rosetta energy units are
 #IPTG chemical potentials where cutoffs will be calculated for broad screen
 
 LOW_IPTG = 0
-HIGH_IPTG = 1
+HIGH_IPTG = 5
 
 
 #IPTG chemical potentials where cutoffs will be calculated for narrow screen
@@ -39,12 +39,6 @@ NARROW_HIGH_IPTG = .6
 
 MAX_ON = 0.49
 MIN_OFF = 0.01
-
-#Tuple of all amino acid single letter codes
-AMINO_ACIDS = ('G', 'A', 'L', 'M', 'F',
-               'W', 'K', 'Q', 'E', 'S',
-               'P', 'V', 'I', 'C', 'Y',
-               'H', 'R', 'N', 'D', 'T')
 
 #ddg for all possible mutations in the lac repressor
 ddg_read = pd.read_csv("epistasiscomponents//ddg.csv")

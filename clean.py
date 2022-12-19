@@ -1,11 +1,9 @@
-from epistasiscomponents.constants import DDG, LAC_SEQ
-
 import pandas as pd
 import numpy as np
 import random
 
-from epistasiscomponents.constants import AMINO_ACIDS, DDG, G_H, G_HDNA, G_L2E, HIGH_IPTG, LAC_SEQ, LOW_IPTG, MAX_ON, MIN_OFF, NARROW_HIGH_IPTG, NARROW_LOW_IPTG
-from epistasiscomponents.epistasis_functions.energy_functions import dg_obs, mutate_background, relative_populations
+from epistasiscomponents.constants import HIGH_IPTG, LOW_IPTG, MAX_ON, MIN_OFF, NARROW_HIGH_IPTG, NARROW_LOW_IPTG
+from epistasiscomponents.epistasis_functions.energy_functions import relative_populations
 import epistasiscomponents.epistasis_functions.gene_functions as gf
 
 #inefficient but works
@@ -95,19 +93,20 @@ def get_energies_from_genotype(genotype, ddg):
     return mut_sum[1:]    
 
 def evolve_v2(ddg, 
-            no_mutations_background, no_mutations_per_round, no_evolutionary_rounds, 
-            broad_repository, narrow_repository,
-            low_max_on=MAX_ON, high_min_off=MIN_OFF):
+            no_mutations_background, no_mutations_per_round, no_evolutionary_rounds,
+            low_max_on=MAX_ON, high_min_off=MIN_OFF,
+            denaturation_check=False):
             """
             Evolutionary simulation of energetic effects of mutatations to a protein sequence.
             Mutants will be screened and placed into two different categories (broad or narrow)
-            based on the distribution of their thermodynamic ensembles. Evolutionary trajectories are then
-            represented as a venn diagram showing the similarities between the specific sequences located
-            in each screen.
+            based on the distribution of their thermodynamic ensembles. Each sequence that passes will be returned as a dictionary that contains 
+            a list of list for all of broad and narrow screen passes for each round.
 
             ddg: Your ddg file specifying all energetic effects of mutations to your sequence
-            no_mut_bg: The number of initial mutations for the first mutants, IE double or triple.
-            no_mut_per_round: Number of mutants per round.
+            no_mutations_background: The number of initial mutations for the first mutants, IE double or triple.
+            no_mutations_per_round: Number of mutants per round.
+            no_evolutionary_rounds: The number of evolutionary rounds you want to run. Each round adds another mutation on to your base sequences.
+            denaturation_check: Unstable, if True it will eliminate any proteins of which should be 'destabilized.'
             """
 
 
@@ -194,19 +193,43 @@ def evolve_v2(ddg,
             broad_muts.append(initial_broad_mutants)
             narrow_muts.append(initial_narrow_mutants)
 
+            print('finished creating background')
+
             for iteration in range(no_evolutionary_rounds):
+
+                it_no = 0
+                print(f'starting iteration {it_no}')
 
                 current_broad_mutants = broad_muts[-1]
                 current_narrow_mutants = narrow_muts[-1]
-    
+                
+                denaturation_pass_ndxs = []
+                #checkign for denaturation
+                #not working, needs some fixing, but kinda helped us see that it's actually working
+                
+                if denaturation_check:
+                    current_muts = [current_broad_mutants, current_narrow_mutants]
+                    for mutant_frame in current_muts:
+                        filter_1 = mutant_frame['hdna'] < 20
+                        filter_2 = mutant_frame['h'] < 20
+                        filter_3 = mutant_frame['l2e'] < 20
+                        mutant_frame.where(filter_1, inplace=True)
+                        mutant_frame.where(filter_2, inplace=True)
+                        mutant_frame.where(filter_3, inplace=True)
+                        denaturation_pass_ndxs.append(mutant_frame.dropna().index)
+
+                    current_broad_mutants = broad_muts[-1].loc[denaturation_pass_ndxs[0]]
+                    current_narrow_mutants = narrow_muts[-1].loc[denaturation_pass_ndxs[0]]
+
+
                 ndxs = []
                 for i in range(no_mutations_per_round):
                     ndxs.append(random.choice(all_ndxs))
                 
-                # expanding mutants for merging
+                # expanding mutants for merging                
                 broad_repeat = pd.DataFrame(np.repeat(current_broad_mutants.values, len(ndxs), axis=0), columns=current_broad_mutants.columns)
                 narrow_repeat = pd.DataFrame(np.repeat(current_narrow_mutants.values, len(ndxs), axis=0), columns=current_narrow_mutants.columns)
-
+           
                 # expanding ndxs for merging
                 broad_ndxs_repeat = ndxs * len(current_broad_mutants)
 
@@ -231,6 +254,7 @@ def evolve_v2(ddg,
                 broad_remerged_wrong_ax = pd.DataFrame([broad_merged_listed])
                 narrow_remerged_wrong_ax = pd.DataFrame([narrow_merged_listed])
                 
+                #it works up til here
                 broad_remerged = broad_remerged_wrong_ax.swapaxes('columns', 'index')
                 narrow_remerged = narrow_remerged_wrong_ax.swapaxes('columns', 'index')
 
@@ -239,8 +263,10 @@ def evolve_v2(ddg,
                 
                 broad_energies = broad_position_checked.apply(lambda row: get_energies_from_genotype(row, ddg))
                 broad_energy_genotype = pd.concat([broad_energies, broad_position_checked], axis=1)
+
                 narrow_energies = narrow_position_checked.apply(lambda row: get_energies_from_genotype(row, ddg))
                 narrow_energy_genotype = pd.concat([narrow_energies, narrow_position_checked], axis=1)
+   
                 broad_energy_genotype.rename(columns={0:'genotype'}, inplace=True)
                 narrow_energy_genotype.rename(columns={0:'genotype'}, inplace=True)
                 
@@ -279,56 +305,30 @@ def evolve_v2(ddg,
                 #screen mutants
                
                 for mutant_frame in current_distros:
+           
                     filter1 = mutant_frame["HDNA LOW IPTG"] < low_max_on
                     filter2 = mutant_frame["HDNA HIGH IPTG"] > high_min_off
                     mutant_frame.where(filter1, inplace=True)
                     mutant_frame.where(filter2, inplace=True)
+                    
                     curr_screen_pass_ndxs.append(mutant_frame.dropna().index)
                 
-
                 current_broad_mutants = broad_energy_genotype.loc[curr_screen_pass_ndxs[0]]
                 current_narrow_mutants = narrow_energy_genotype.loc[curr_screen_pass_ndxs[1]]
                 
                 broad_muts.append(current_broad_mutants)
-                #print(current_broad_mutants)
                 narrow_muts.append(current_narrow_mutants)
+
+                print(f'finished iteration {it_no}')
+                it_no += 1
                 
+            
+            dict_return = {
+                'broad' : broad_muts,
+                'narrow' : narrow_muts
+            }
+            return dict_return
 
-            broad_r.append(broad_muts)
-            narrow_r.append(narrow_muts)
-                
-
-broad_r = []
-narrow_r = []
-evolve_v2(ddg=DDG, no_mutations_background=1, no_mutations_per_round=50, no_evolutionary_rounds=3, 
-        broad_repository=broad_r, narrow_repository=narrow_r, low_max_on=MAX_ON, high_min_off=MIN_OFF)
-#print('broad')
-#for i in broad_r:
-#    print(i)
-#    print('\n')
-#for i in narrow_r:
-#    print(i)
-#    print('\n')
-
-#print('i am a genius')
         
-#evolve(DDG, no_mut_bg=2, no_mut_per_round=100, no_evolutionary_rounds=2, broad_rep=broad_r, narrow_rep=narrow_r)
-#print(broad_r)
-#print(narrow_r)
-
-
-
-
-
-
-
-
-#index = [7, 17, 34]
-#values = [list([[3520, 717]]), list([[905, 467]]), list([[5364, 19]])]
-#position_check_frame = pd.DataFrame(data=values, index=index)
-#print(position_check_frame)
-#position_check_frame.apply(lambda row: position_check(
-#    genotype=row, current_mutation=20, first_pass=False, ndxs=None
-#))
 
 
